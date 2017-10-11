@@ -5,11 +5,11 @@
 /* dmatrix */
 #include <dmatrix.h>
 
-#define SCR_BUF_W	640
-#define SCR_BUF_H	640
+#define SCR_BUF_W	1280
+#define SCR_BUF_H	720
 
-#define SCR_W		640
-#define SCR_H		640
+#define SCR_W		1280
+#define SCR_H		720
 
 #define BLACK		0
 #define WHITE		1
@@ -17,9 +17,6 @@
 
 uint8_t colors[MAX_COLORS][3] = { {   0,   0,   0 },	/* white */
 				  { 255, 255, 255 } };	/* black */
-
-/* -2.5, 1	x
- * -1  , 1	y */
 
 void
 color_pixel(uint8_t scr_buf[][SCR_BUF_W][3], int py, int px, int color)
@@ -49,8 +46,12 @@ mandelbrot(uint8_t scr_buf[][SCR_BUF_W][3], int max_it)
 				rx = tmp;
 			}
 
-			if (curr_it == max_it) {
-				color_pixel(scr_buf, i, j, WHITE);
+			if (curr_it < max_it) {
+				scr_buf[i][j][0] = (double) curr_it / (double) max_it * 255;
+				scr_buf[i][j][1] = (double) curr_it / (double) max_it * 255;
+
+			} else {
+				color_pixel(scr_buf, i, j, BLACK);
 			}
 		}
 	}
