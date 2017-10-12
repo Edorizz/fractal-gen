@@ -15,8 +15,22 @@
 #define WHITE		1
 #define MAX_COLORS	2
 
+#define MAX_IT		64
+
 uint8_t colors[MAX_COLORS][3] = { {   0,   0,   0 },	/* white */
 				  { 255, 255, 255 } };	/* black */
+
+int
+_atoi(const char *str)
+{
+	int n;
+
+	for (n = 0; *str; ++str) {
+		n = n * 10 + *str - '0';
+	}
+
+	return n;
+}
 
 void
 color_pixel(uint8_t scr_buf[][SCR_BUF_W][3], int py, int px, int color)
@@ -57,11 +71,77 @@ mandelbrot(uint8_t scr_buf[][SCR_BUF_W][3], int max_it)
 	}
 }
 
+void
+cmplx_mult(double *rx, double *iy, double rx2, double iy2)
+{
+	double tmp;
+
+	tmp = *rx * rx2 - *iy * iy2;
+	*iy = *rx * iy2 + *iy * rx2;
+	*rx = tmp;
+}
+
+void
+fractal_gen(uint8_t scr_buf[][SCR_BUF_W][3], int exp, int max_it)
+{
+	int i, j, k, curr_it;
+	double sx, sy, rx, iy;
+
+	for (i = 0; i != SCR_BUF_H; ++i) {
+		for (j = 0; j != SCR_BUF_W; ++j) {
+			iy = sy = 2.0 / SCR_BUF_H * i - 1.0;
+			rx = sx = 3.5 / SCR_BUF_W * j - 2.5;
+
+			for (curr_it = 0; rx * rx + iy * iy < 4.0 && curr_it != max_it; ++curr_it) {
+				for (k = 1; k != exp; ++k) {
+					cmplx_mult(&rx, &iy, rx, iy);
+				}
+
+				rx += sx;
+				iy += sy;
+			}
+
+			if (curr_it < max_it) {
+				scr_buf[i][j][0] = (double) curr_it / (double) max_it * 255;
+				scr_buf[i][j][1] = (double) curr_it / (double) max_it * 255;
+
+			} else {
+				color_pixel(scr_buf, i, j, BLACK);
+			}
+		}
+	}
+}
+
 int
 main(int argc, char **argv)
 {
 	struct dot_matrix dm;
 	uint8_t scr_buf[SCR_BUF_H][SCR_BUF_W][3];
+	int max_it, exp, i;
+
+	max_it = MAX_IT;
+	/* Default to Mandelbrot set */
+	exp = 2;
+
+	for (i = 1; i != argc; ++i) {
+		fprintf(stderr, "Reading arg %s\n", argv[i]);
+		if (argv[i][0] == '-') {
+			switch (argv[i][1]) {
+			case 'i':
+				max_it = _atoi(argv[++i]);
+				break;
+
+			case 'e':
+				exp = _atoi(argv[++i]);
+				break;
+
+			default:
+				fprintf(stderr, "Error: Expected option after '-'; skipping arguments\n");
+				break;
+			}
+		}
+	}
+
 
 	dm.scr_buf = scr_buf[0][0];
 	dm.scr_buf_w = SCR_BUF_W;
@@ -70,7 +150,7 @@ main(int argc, char **argv)
 	create_matrix(&dm, SCR_W, SCR_H);
 	memset(scr_buf[0][0], 0, SCR_BUF_W * SCR_BUF_H * 3);
 
-	mandelbrot(scr_buf, 64);
+	fractal_gen(scr_buf, exp, max_it);
 	update_matrix(&dm);
 
 	while (!glfwWindowShouldClose(dm.win)) {
